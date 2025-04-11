@@ -7,227 +7,141 @@
  */
 
 // Import required modules
-import inquirer from 'inquirer';
+import readline from 'readline';
 import chalk from 'chalk';
 import { fetchAccounts, fetchSitesByAccount, fetchInstallsBySite } from './utils.js';
+
+// Create readline interface
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+// Enable keypress events
+readline.emitKeypressEvents(process.stdin);
+if (process.stdin.isTTY) {
+  process.stdin.setRawMode(true);
+}
+
+/**
+ * Clear the screen completely
+ */
+function clearScreen() {
+  // ANSI escape codes to clear screen and move cursor to top-left
+  process.stdout.write('\u001B[2J\u001B[0;0H');
+}
 
 /**
  * Display a welcome message
  */
 function displayWelcome() {
-  console.clear();
+  clearScreen();
   console.log(chalk.blue.bold('Welcome to the WP Engine API CLI Tool!'));
   console.log(chalk.gray('Use arrow keys to navigate, Enter to select, and Escape to go back.\n'));
 }
 
 /**
- * Setup escape key handling for inquirer prompts
+ * Create a simple menu with keyboard navigation
+ * @param {string} title - Menu title
+ * @param {Array} options - Menu options
+ * @returns {Promise<number>} Selected index
  */
-function setupEscapeKey(rl) {
-  // Save the original _listeners
-  const origListeners = rl.listeners('keypress');
-  
-  // Remove all existing listeners
-  rl.removeAllListeners('keypress');
-  
-  // Add our own listener that will check for escape key
-  rl.on('keypress', (s, key) => {
-    if (key && key.name === 'escape') {
-      // Simulate selecting the 'back' option by sending the input for it
-      rl.output.unmute();
-      rl.close();
-      return rl.emit('line', 'back');
-    }
+async function createMenu(title, options) {
+  return new Promise((resolve) => {
+    let selectedIndex = 0;
+    const maxIndex = options.length - 1;
     
-    // Call the original listeners
-    for (const listener of origListeners) {
-      listener(s, key);
-    }
-  });
-  
-  return rl;
-}
-
-/**
- * Prompt the user to select an account
- * @returns {Promise<Object>} The selected account
- */
-async function selectAccount() {
-  displayWelcome();
-  
-  try {
-    console.log(chalk.yellow('Loading accounts...'));
-    const accounts = await fetchAccounts();
-    
-    if (!accounts.length) {
-      console.log(chalk.red('No accounts found. Please check your API credentials.'));
-      process.exit(1);
-    }
-    
-    console.clear();
-    displayWelcome();
-    
-    // Create a custom prompt that handles the escape key
-    const prompt = inquirer.createPromptModule({
-      skipThenForConfirmIfFalse: true
-    });
-    
-    const { selectedAccount } = await prompt([
-      {
-        type: 'list',
-        name: 'selectedAccount',
-        message: 'Select an account:',
-        choices: accounts.map(account => ({
-          name: account.name,
-          value: account
-        })),
-        pageSize: 10
-      }
-    ]);
-    
-    return selectedAccount;
-  } catch (error) {
-    console.error(chalk.red('Error selecting account:'), error);
-    process.exit(1);
-  }
-}
-
-/**
- * Prompt the user to select a site from the given account
- * @param {Object} account - The account to select sites from
- * @returns {Promise<Object>} The selected site
- */
-async function selectSite(account) {
-  console.clear();
-  displayWelcome();
-  
-  try {
-    console.log(chalk.yellow(`Loading sites for account: ${account.name}...`));
-    const sites = await fetchSitesByAccount(account.id);
-    
-    if (!sites.length) {
-      console.log(chalk.red(`No sites found for account: ${account.name}`));
-      console.log(chalk.gray('Press any key to go back...'));
-      process.stdin.setRawMode(true);
-      await new Promise(resolve => process.stdin.once('data', () => {
-        process.stdin.setRawMode(false);
-        resolve();
-      }));
-      return null;
-    }
-    
-    console.clear();
-    displayWelcome();
-    
-    // Create a custom prompt that handles the escape key
-    const prompt = inquirer.createPromptModule({
-      skipThenForConfirmIfFalse: true
-    });
-    
-    const { selectedSite } = await prompt([
-      {
-        type: 'list',
-        name: 'selectedSite',
-        message: 'Select a site:',
-        choices: [
-          ...sites.map(site => ({
-            name: site.name,
-            value: site
-          })),
-          new inquirer.Separator(),
-          {
-            name: '← Back to account selection',
-            value: 'back'
-          }
-        ],
-        pageSize: 10
-      }
-    ]);
-    
-    if (selectedSite === 'back') {
-      return null;
-    }
-    
-    return selectedSite;
-  } catch (error) {
-    console.error(chalk.red('Error selecting site:'), error);
-    console.log(chalk.gray('Press any key to go back...'));
-    process.stdin.setRawMode(true);
-    await new Promise(resolve => process.stdin.once('data', () => {
-      process.stdin.setRawMode(false);
-      resolve();
-    }));
-    return null;
-  }
-}
-
-/**
- * Display installs for the given site
- * @param {Object} site - The site to display installs for
- */
-async function displayInstalls(site) {
-  console.clear();
-  displayWelcome();
-  
-  try {
-    console.log(chalk.yellow(`Loading installs for site: ${site.name}...`));
-    const installs = await fetchInstallsBySite(site.id);
-    
-    console.clear();
-    displayWelcome();
-    
-    console.log(chalk.green(`Installs for site "${site.name}":`));
-    
-    if (!installs.length) {
-      console.log(chalk.red(`No installs found for site: ${site.name}`));
-    } else {
-      installs.forEach((install, index) => {
-        console.log(chalk.white('\n' + '='.repeat(50)));
-        console.log(chalk.cyan(`Install #${index + 1}:`));
-        console.log(chalk.white(`Site Name: ${install.name || 'N/A'}`));
-        console.log(chalk.white(`Environment: ${install.environment || 'N/A'}`));
-        console.log(chalk.white(`CNAME: ${install.cname || 'N/A'}`));
-        console.log(chalk.white(`PHP Version: ${install.php_version || 'N/A'}`));
-        console.log(chalk.white(`Multisite: ${install.is_multisite ? 'Yes' : 'No'}`));
+    // Function to render the menu
+    function renderMenu() {
+      clearScreen();
+      displayWelcome();
+      console.log(chalk.yellow(`${title}\n`));
+      
+      options.forEach((option, index) => {
+        if (index === selectedIndex) {
+          console.log(chalk.cyan(`❯ ${option}`));
+        } else {
+          console.log(`  ${option}`);
+        }
       });
     }
     
-    console.log(chalk.white('\n' + '='.repeat(50)));
+    // Initial render
+    renderMenu();
     
-    // Create a custom prompt that handles the escape key
-    const prompt = inquirer.createPromptModule({
-      skipThenForConfirmIfFalse: true
-    });
-    
-    const { action } = await prompt([
-      {
-        type: 'list',
-        name: 'action',
-        message: 'What would you like to do?',
-        choices: [
-          {
-            name: '← Back to site selection',
-            value: 'back'
-          },
-          {
-            name: 'Exit',
-            value: 'exit'
-          }
-        ]
+    // Handle keypress events
+    function handleKeypress(str, key) {
+      if (key) {
+        if (key.name === 'up' && selectedIndex > 0) {
+          selectedIndex--;
+          renderMenu();
+        } else if (key.name === 'down' && selectedIndex < maxIndex) {
+          selectedIndex++;
+          renderMenu();
+        } else if (key.name === 'return') {
+          process.stdin.removeListener('keypress', handleKeypress);
+          resolve(selectedIndex);
+        } else if (key.name === 'escape') {
+          process.stdin.removeListener('keypress', handleKeypress);
+          resolve(-1); // Special value for 'back'
+        } else if (key.ctrl && key.name === 'c') {
+          clearScreen();
+          console.log(chalk.blue('Exiting WP Engine API CLI Tool...'));
+          process.exit(0);
+        }
       }
-    ]);
+    }
     
-    return action;
-  } catch (error) {
-    console.error(chalk.red('Error displaying installs:'), error);
-    console.log(chalk.gray('Press any key to go back...'));
-    process.stdin.setRawMode(true);
-    await new Promise(resolve => process.stdin.once('data', () => {
-      process.stdin.setRawMode(false);
+    // Register keypress handler
+    process.stdin.on('keypress', handleKeypress);
+  });
+}
+
+/**
+ * Display a loading message
+ * @param {string} message - Loading message
+ */
+function displayLoading(message) {
+  clearScreen();
+  displayWelcome();
+  console.log(chalk.yellow(message));
+}
+
+/**
+ * Display installs information
+ * @param {string} siteName - Site name
+ * @param {Object} selectedInstall - The selected install to display details for
+ */
+function displayInstallDetails(siteName, selectedInstall) {
+  clearScreen();
+  displayWelcome();
+  
+  console.log(chalk.green(`Install Details for "${selectedInstall.name}" on site "${siteName}":`));
+  console.log(chalk.white('\n' + '='.repeat(50)));
+  console.log(chalk.cyan(`Site Name: ${selectedInstall.name || 'N/A'}`));
+  console.log(chalk.white(`Environment: ${selectedInstall.environment || 'N/A'}`));
+  console.log(chalk.white(`Primary Domain: ${selectedInstall.primary_domain || 'N/A'}`));
+  console.log(chalk.white(`CNAME: ${selectedInstall.cname || 'N/A'}`));
+  console.log(chalk.white(`PHP Version: ${selectedInstall.php_version || 'N/A'}`));
+  console.log(chalk.white(`Multisite: ${selectedInstall.is_multisite ? 'Yes' : 'No'}`));
+  console.log(chalk.white('\n' + '='.repeat(50)));
+}
+
+/**
+ * Wait for any key press
+ * @returns {Promise<void>}
+ */
+async function waitForKeyPress() {
+  return new Promise((resolve) => {
+    console.log(chalk.gray('Press any key to continue...'));
+    
+    function handleKeypress() {
+      process.stdin.removeListener('keypress', handleKeypress);
       resolve();
-    }));
-    return 'back';
-  }
+    }
+    
+    process.stdin.once('keypress', handleKeypress);
+  });
 }
 
 /**
@@ -235,54 +149,145 @@ async function displayInstalls(site) {
  */
 async function main() {
   try {
-    // Register keypress events
-    process.stdin.on('keypress', (str, key) => {
-      if (key && key.name === 'escape') {
-        // This will be handled by the individual prompts
-      }
-    });
-    
     let exitApp = false;
     
     while (!exitApp) {
-      const account = await selectAccount();
+      // Account selection
+      displayLoading('Loading accounts...');
+      const accounts = await fetchAccounts();
       
-      if (account) {
-        let backToAccounts = false;
+      if (!accounts.length) {
+        clearScreen();
+        console.log(chalk.red('No accounts found. Please check your API credentials.'));
+        process.exit(1);
+      }
+      
+      const accountOptions = accounts.map(account => account.name);
+      const accountIndex = await createMenu('Select an account:', accountOptions);
+      
+      if (accountIndex === -1) {
+        // User pressed Escape at the top level, exit the app
+        exitApp = true;
+        continue;
+      }
+      
+      const selectedAccount = accounts[accountIndex];
+      
+      // Site selection
+      let backToAccounts = false;
+      
+      while (!backToAccounts && !exitApp) {
+        displayLoading(`Loading sites for account: ${selectedAccount.name}...`);
+        const sites = await fetchSitesByAccount(selectedAccount.id);
         
-        while (!backToAccounts) {
-          const site = await selectSite(account);
+        if (!sites.length) {
+          clearScreen();
+          displayWelcome();
+          console.log(chalk.red(`No sites found for account: ${selectedAccount.name}`));
+          await waitForKeyPress();
+          backToAccounts = true;
+          continue;
+        }
+        
+        const siteOptions = sites.map(site => site.name);
+        siteOptions.push('← Back to account selection');
+        
+        const siteIndex = await createMenu('Select a site:', siteOptions);
+        
+        if (siteIndex === -1 || siteIndex === siteOptions.length - 1) {
+          // User pressed Escape or selected 'Back'
+          backToAccounts = true;
+          continue;
+        }
+        
+        const selectedSite = sites[siteIndex];
+        
+        // Install selection
+        let backToSites = false;
+        
+        while (!backToSites && !backToAccounts && !exitApp) {
+          displayLoading(`Loading installs for site: ${selectedSite.name}...`);
+          const installs = await fetchInstallsBySite(selectedSite.id);
           
-          if (!site) {
-            backToAccounts = true;
+          if (!installs.length) {
+            clearScreen();
+            displayWelcome();
+            console.log(chalk.red(`No installs found for site: ${selectedSite.name}`));
+            await waitForKeyPress();
+            backToSites = true;
             continue;
           }
           
-          const action = await displayInstalls(site);
+          // Format install options with name, environment, and domain
+          const installOptions = installs.map(install => 
+            `${install.name} (${install.environment}) - ${install.primary_domain || 'No domain'}`
+          );
+          installOptions.push('← Back to site selection');
+          installOptions.push('Exit');
           
-          if (action === 'exit') {
+          const installIndex = await createMenu('Select an install:', installOptions);
+          
+          if (installIndex === -1 || installIndex === installOptions.length - 2) {
+            // User pressed Escape or selected 'Back to site selection'
+            backToSites = true;
+            continue;
+          } else if (installIndex === installOptions.length - 1) {
+            // User selected 'Exit'
             exitApp = true;
-            backToAccounts = true;
-          } else if (action === 'back') {
-            // Continue the loop to select another site
+            continue;
+          }
+          
+          const selectedInstall = installs[installIndex];
+          
+          // Display install management options
+          let backToInstalls = false;
+          
+          while (!backToInstalls && !backToSites && !backToAccounts && !exitApp) {
+            displayInstallDetails(selectedSite.name, selectedInstall);
+            
+            const managementOptions = [
+              'Delete install',
+              '← Back to install selection',
+              'Exit'
+            ];
+            
+            const managementIndex = await createMenu('What would you like to do?', managementOptions);
+            
+            if (managementIndex === -1 || managementIndex === 1) {
+              // User pressed Escape or selected 'Back to install selection'
+              backToInstalls = true;
+            } else if (managementIndex === 0) {
+              // User selected 'Delete install'
+              // This will do nothing for now, as requested
+              clearScreen();
+              displayWelcome();
+              console.log(chalk.yellow('Delete functionality will be implemented in a future update.'));
+              await waitForKeyPress();
+            } else if (managementIndex === 2) {
+              // User selected 'Exit'
+              exitApp = true;
+            }
           }
         }
       }
     }
     
-    console.clear();
+    clearScreen();
     console.log(chalk.blue('Thank you for using the WP Engine API CLI Tool!'));
     process.exit(0);
   } catch (error) {
+    clearScreen();
     console.error(chalk.red('An error occurred:'), error);
     process.exit(1);
   }
 }
 
-// Enable keypress events
-process.stdin.setRawMode(true);
-process.stdin.resume();
-process.stdin.setEncoding('utf8');
+// Handle Ctrl+C globally
+process.on('SIGINT', () => {
+  clearScreen();
+  console.log(chalk.blue('\nExiting WP Engine API CLI Tool...'));
+  process.exit(0);
+});
 
 // Run the main function
 main();
