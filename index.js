@@ -44,22 +44,37 @@ function displayWelcome() {
  * Create a simple menu with keyboard navigation
  * @param {string} title - Menu title
  * @param {Array} options - Menu options
+ * @param {boolean} [preserveScreen=false] - Whether to preserve the current screen content
  * @returns {Promise<number>} Selected index
  */
-async function createMenu(title, options) {
+async function createMenu(title, options, preserveScreen = false) {
   return new Promise((resolve) => {
     let selectedIndex = 0;
     const maxIndex = options.length - 1;
+    let firstRender = true;
     
     // Function to render the menu
     function renderMenu() {
-      clearScreen();
-      displayWelcome();
-      console.log(chalk.yellow(`${title}\n`));
+      if (firstRender) {
+        // First time rendering
+        if (!preserveScreen) {
+          clearScreen();
+          displayWelcome();
+        }
+        console.log(chalk.yellow(`${title}\n`));
+        firstRender = false;
+      } else {
+        // For subsequent renders, just clear and redraw the options
+        // Move cursor up by the number of options
+        process.stdout.write(`\u001B[${options.length}A`);
+        // Clear from cursor to end of screen
+        process.stdout.write('\u001B[0J');
+      }
       
+      // Draw the options
       options.forEach((option, index) => {
         if (index === selectedIndex) {
-          console.log(chalk.cyan(`❯ ${option}`));
+          console.log(chalk.cyan(`→ ${option}`));
         } else {
           console.log(`  ${option}`);
         }
@@ -315,8 +330,84 @@ async function main() {
             clearScreen();
             displayWelcome();
             console.log(chalk.red(`No installs found for site: ${selectedSite.name}`));
-            await waitForKeyPress();
-            backToSites = true;
+            console.log('');
+            
+            // Show options even when no installs are found
+            const emptyInstallOptions = [
+              '+ Add install',
+              '← Back to site selection',
+              'Exit'
+            ];
+            
+            const emptyInstallIndex = await createMenu('What would you like to do?', emptyInstallOptions, true);
+            
+            if (emptyInstallIndex === -1 || emptyInstallIndex === 1) {
+              // User pressed Escape or selected 'Back to site selection'
+              backToSites = true;
+              continue;
+            } else if (emptyInstallIndex === 2) {
+              // User selected 'Exit'
+              exitApp = true;
+              continue;
+            } else if (emptyInstallIndex === 0) {
+              // User selected '+ Add install'
+              // This code is duplicated from below to handle the add install flow
+              try {
+                // Prompt for install details
+                const name = await promptForField('name');
+                
+                // Environment selection menu instead of text input
+                clearScreen();
+                displayWelcome();
+                console.log(chalk.cyan('Select environment:'));
+                
+                const environmentOptions = [
+                  'production',
+                  'staging',
+                  'development'
+                ];
+                
+                const environmentIndex = await createMenu('Select environment:', environmentOptions);
+                
+                // If user pressed Escape, cancel the operation
+                if (environmentIndex === -1) {
+                  continue;
+                }
+                
+                const environment = environmentOptions[environmentIndex];
+                
+                // Display loading message
+                clearScreen();
+                displayWelcome();
+                console.log(chalk.yellow('Adding install...'));
+                
+                // Create the install
+                const newInstall = await createInstall(
+                  selectedSite.id,
+                  selectedAccount.id,
+                  {
+                    name,
+                    environment
+                  }
+                );
+                
+                // Success message
+                clearScreen();
+                displayWelcome();
+                console.log(chalk.green('Install added.'));
+                await waitForKeyPress();
+                
+                // Stay on the install selection screen
+                continue;
+              } catch (error) {
+                // Error message
+                clearScreen();
+                displayWelcome();
+                console.log(chalk.red(`Failed to add install: ${error.message}`));
+                await waitForKeyPress();
+                continue;
+              }
+            }
             continue;
           }
           
@@ -350,6 +441,7 @@ async function main() {
               console.log(chalk.cyan('Select environment:'));
               
               const environmentOptions = [
+                'production',
                 'staging',
                 'development'
               ];
