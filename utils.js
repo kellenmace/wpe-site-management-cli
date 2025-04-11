@@ -221,3 +221,51 @@ export async function createInstall(siteId, accountId, installData) {
     throw error;
   }
 }
+
+/**
+ * Create a new site
+ * @param {string} accountId - The ID of the account to create the site for
+ * @param {Object} siteData - The data for the new site
+ * @returns {Promise<Object>} The newly created site
+ */
+export async function createSite(accountId, siteData) {
+  try {
+    const credentials = createAuthHeader();
+    
+    if (!credentials) {
+      throw new Error('API credentials not found. Please check your .env file.');
+    }
+    
+    // Debug log to see what values we're sending
+    console.log('Debug - Creating site with:');
+    console.log(`Account ID: ${accountId}`);
+    console.log(`Site Data: ${JSON.stringify(siteData)}`);
+    
+    // The API expects account_id
+    const requestBody = {
+      account_id: accountId,
+      ...siteData
+    };
+    
+    console.log(`Request Body: ${JSON.stringify(requestBody)}`);
+    
+    const response = await fetch(`https://api.wpengineapi.com/v1/sites`, {
+      method: 'POST',
+      headers: {
+        'Authorization': credentials,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Failed to create site: ${response.status} ${response.statusText}\n${JSON.stringify(errorData, null, 2)}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating site:', error);
+    throw error;
+  }
+}

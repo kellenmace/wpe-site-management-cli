@@ -9,7 +9,7 @@
 // Import required modules
 import readline from 'readline';
 import chalk from 'chalk';
-import { fetchAccounts, fetchSitesByAccount, fetchInstallsBySite, deleteInstall, createInstall } from './utils.js';
+import { fetchAccounts, fetchSitesByAccount, fetchInstallsBySite, deleteInstall, createInstall, createSite } from './utils.js';
 
 // Create readline interface
 const rl = readline.createInterface({
@@ -261,14 +261,45 @@ async function main() {
         }
         
         const siteOptions = sites.map(site => site.name);
+        siteOptions.push('+ Add site');
         siteOptions.push('← Back to account selection');
         
         const siteIndex = await createMenu('Select a site:', siteOptions);
         
         if (siteIndex === -1 || siteIndex === siteOptions.length - 1) {
-          // User pressed Escape or selected 'Back'
+          // User pressed Escape or selected 'Back to account selection'
           backToAccounts = true;
           continue;
+        } else if (siteIndex === siteOptions.length - 2) {
+          // User selected '+ Add site'
+          try {
+            // Prompt for site details
+            const name = await promptForField('name');
+            
+            // Display loading message
+            clearScreen();
+            displayWelcome();
+            console.log(chalk.yellow('Adding site...'));
+            
+            // Create the site
+            const newSite = await createSite(selectedAccount.id, { name });
+            
+            // Success message
+            clearScreen();
+            displayWelcome();
+            console.log(chalk.green('Site added.'));
+            await waitForKeyPress();
+            
+            // Stay on the site selection screen
+            continue;
+          } catch (error) {
+            // Error message
+            clearScreen();
+            displayWelcome();
+            console.log(chalk.red(`Failed to add site: ${error.message}`));
+            await waitForKeyPress();
+            continue;
+          }
         }
         
         const selectedSite = sites[siteIndex];
