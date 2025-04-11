@@ -137,3 +137,36 @@ export async function fetchInstallsBySite(siteId) {
     throw error;
   }
 }
+
+/**
+ * Delete an install by ID
+ * @param {string} installId - The ID of the install to delete
+ * @returns {Promise<Object>} The response from the API
+ */
+export async function deleteInstall(installId) {
+  try {
+    const credentials = createAuthHeader();
+    
+    if (!credentials) {
+      throw new Error('API credentials not found. Please check your .env file.');
+    }
+    
+    const response = await fetch(`https://api.wpengineapi.com/v1/installs/${installId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': credentials,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Failed to delete install: ${response.status} ${response.statusText}\n${JSON.stringify(errorData, null, 2)}`);
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting install:', error);
+    throw error;
+  }
+}

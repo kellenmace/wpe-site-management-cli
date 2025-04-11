@@ -9,7 +9,7 @@
 // Import required modules
 import readline from 'readline';
 import chalk from 'chalk';
-import { fetchAccounts, fetchSitesByAccount, fetchInstallsBySite } from './utils.js';
+import { fetchAccounts, fetchSitesByAccount, fetchInstallsBySite, deleteInstall } from './utils.js';
 
 // Create readline interface
 const rl = readline.createInterface({
@@ -125,6 +125,64 @@ function displayInstallDetails(siteName, selectedInstall) {
   console.log(chalk.white(`PHP Version: ${selectedInstall.php_version || 'N/A'}`));
   console.log(chalk.white(`Multisite: ${selectedInstall.is_multisite ? 'Yes' : 'No'}`));
   console.log(chalk.white('\n' + '='.repeat(50)));
+}
+
+/**
+ * Get text input from the user
+ * @param {string} prompt - The prompt to display
+ * @returns {Promise<string>} The user's input
+ */
+async function getTextInput() {
+  return new Promise((resolve) => {
+    let input = '';
+    process.stdout.write('> ');
+    
+    // Remove any existing keypress listeners
+    const listeners = process.stdin.listeners('keypress');
+    listeners.forEach(listener => {
+      process.stdin.removeListener('keypress', listener);
+    });
+    
+    // Make sure raw mode is enabled
+    if (process.stdin.isTTY && !process.stdin.isRaw) {
+      process.stdin.setRawMode(true);
+    }
+    
+    // Handle keypress events
+    function handleKeypress(str, key) {
+      // Exit on Ctrl+C
+      if (key && key.ctrl && key.name === 'c') {
+        process.stdout.write('\n');
+        process.exit(0);
+      }
+      
+      if (key && key.name === 'return') {
+        // Enter key - submit input
+        process.stdout.write('\n');
+        process.stdin.removeListener('keypress', handleKeypress);
+        
+        // Restore previous listeners
+        listeners.forEach(listener => {
+          process.stdin.on('keypress', listener);
+        });
+        
+        resolve(input);
+      } else if (key && key.name === 'backspace') {
+        // Backspace key - remove last character
+        if (input.length > 0) {
+          input = input.slice(0, -1);
+          process.stdout.write('\b \b'); // Move back, write space, move back again
+        }
+      } else if (str && !key.ctrl && !key.meta && !key.alt) {
+        // Regular character - add to input
+        input += str;
+        process.stdout.write(str);
+      }
+    }
+    
+    // Register the keypress handler
+    process.stdin.on('keypress', handleKeypress);
+  });
 }
 
 /**
@@ -258,11 +316,47 @@ async function main() {
               backToInstalls = true;
             } else if (managementIndex === 0) {
               // User selected 'Delete install'
-              // This will do nothing for now, as requested
               clearScreen();
               displayWelcome();
-              console.log(chalk.yellow('Delete functionality will be implemented in a future update.'));
-              await waitForKeyPress();
+              
+              // Display warning message
+              console.log(chalk.red('WARNING: A deleted environment is not recoverable, and the name will no longer be available. You cannot undo this action.'));
+              console.log(chalk.yellow(`Type "${selectedInstall.name}" to confirm, then press Enter.`));
+              
+              // Get user confirmation without clearing the screen
+              const confirmation = await getTextInput();
+              
+              if (confirmation !== selectedInstall.name) {
+                // Incorrect confirmation
+                clearScreen();
+                displayWelcome();
+                console.log(chalk.red(`Incorrect confirmation. You typed "${confirmation}" but the install name is "${selectedInstall.name}".`));
+                await waitForKeyPress();
+              } else {
+                // Correct confirmation, proceed with deletion
+                clearScreen();
+                displayWelcome();
+                console.log(chalk.yellow('Deleting install...'));
+                
+                try {
+                  await deleteInstall(selectedInstall.id);
+                  
+                  // Success message
+                  clearScreen();
+                  displayWelcome();
+                  console.log(chalk.green('Install deleted.'));
+                  await waitForKeyPress();
+                  
+                  // Return to install selection
+                  backToInstalls = true;
+                } catch (error) {
+                  // Error message
+                  clearScreen();
+                  displayWelcome();
+                  console.log(chalk.red(`Failed to delete install: ${error.message}`));
+                  await waitForKeyPress();
+                }
+              }
             } else if (managementIndex === 2) {
               // User selected 'Exit'
               exitApp = true;
