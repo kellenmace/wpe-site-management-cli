@@ -170,3 +170,54 @@ export async function deleteInstall(installId) {
     throw error;
   }
 }
+
+/**
+ * Create a new install
+ * @param {string} siteId - The ID of the site to create the install for
+ * @param {string} accountId - The ID of the account to create the install for
+ * @param {Object} installData - The data for the new install
+ * @returns {Promise<Object>} The newly created install
+ */
+export async function createInstall(siteId, accountId, installData) {
+  try {
+    const credentials = createAuthHeader();
+    
+    if (!credentials) {
+      throw new Error('API credentials not found. Please check your .env file.');
+    }
+    
+    // Debug log to see what values we're sending
+    console.log('Debug - Creating install with:');
+    console.log(`Site ID: ${siteId}`);
+    console.log(`Account ID: ${accountId}`);
+    console.log(`Install Data: ${JSON.stringify(installData)}`);
+    
+    // The API expects site_id and account_id
+    const requestBody = {
+      site_id: siteId,
+      account_id: accountId,
+      ...installData
+    };
+    
+    console.log(`Request Body: ${JSON.stringify(requestBody)}`);
+    
+    const response = await fetch(`https://api.wpengineapi.com/v1/installs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': credentials,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Failed to create install: ${response.status} ${response.statusText}\n${JSON.stringify(errorData, null, 2)}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating install:', error);
+    throw error;
+  }
+}

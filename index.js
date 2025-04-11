@@ -9,7 +9,7 @@
 // Import required modules
 import readline from 'readline';
 import chalk from 'chalk';
-import { fetchAccounts, fetchSitesByAccount, fetchInstallsBySite, deleteInstall } from './utils.js';
+import { fetchAccounts, fetchSitesByAccount, fetchInstallsBySite, deleteInstall, createInstall } from './utils.js';
 
 // Create readline interface
 const rl = readline.createInterface({
@@ -186,6 +186,19 @@ async function getTextInput() {
 }
 
 /**
+ * Prompt for a field with a label
+ * @param {string} label - The label for the field
+ * @param {string} [hint] - Optional hint text
+ * @returns {Promise<string>} The user's input
+ */
+async function promptForField(label, hint) {
+  clearScreen();
+  displayWelcome();
+  console.log(chalk.cyan(`Enter ${label}${hint ? ` ${hint}` : ''}:`));
+  return getTextInput();
+}
+
+/**
  * Wait for any key press
  * @returns {Promise<void>}
  */
@@ -280,6 +293,7 @@ async function main() {
           const installOptions = installs.map(install => 
             `${install.name} (${install.environment}) - ${install.primary_domain || 'No domain'}`
           );
+          installOptions.push('+ Add install');
           installOptions.push('← Back to site selection');
           installOptions.push('Exit');
           
@@ -293,6 +307,62 @@ async function main() {
             // User selected 'Exit'
             exitApp = true;
             continue;
+          } else if (installIndex === installOptions.length - 3) {
+            // User selected '+ Add install'
+            try {
+              // Prompt for install details
+              const name = await promptForField('name');
+              
+              // Environment selection menu instead of text input
+              clearScreen();
+              displayWelcome();
+              console.log(chalk.cyan('Select environment:'));
+              
+              const environmentOptions = [
+                'staging',
+                'development'
+              ];
+              
+              const environmentIndex = await createMenu('Select environment:', environmentOptions);
+              
+              // If user pressed Escape, cancel the operation
+              if (environmentIndex === -1) {
+                continue;
+              }
+              
+              const environment = environmentOptions[environmentIndex];
+              
+              // Display loading message
+              clearScreen();
+              displayWelcome();
+              console.log(chalk.yellow('Adding install...'));
+              
+              // Create the install
+              const newInstall = await createInstall(
+                selectedSite.id,
+                selectedAccount.id,
+                {
+                  name,
+                  environment
+                }
+              );
+              
+              // Success message
+              clearScreen();
+              displayWelcome();
+              console.log(chalk.green('Install added.'));
+              await waitForKeyPress();
+              
+              // Stay on the install selection screen
+              continue;
+            } catch (error) {
+              // Error message
+              clearScreen();
+              displayWelcome();
+              console.log(chalk.red(`Failed to add install: ${error.message}`));
+              await waitForKeyPress();
+              continue;
+            }
           }
           
           const selectedInstall = installs[installIndex];
