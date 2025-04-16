@@ -1,6 +1,8 @@
 # WP Engine Site Management CLI Tool (WP Engine API Demo)
 
-An interactive command-line interface for working with the WP Engine API and managing your WordPress sites and installs.
+An interactive command-line interface for working with the [WP Engine API](https://wpengineapi.com/) and managing your WordPress sites and installs.
+
+This is a demo app to accompany the [Mastering the WP Engine API: A Comprehensive Guide for Developers](https://wpengine.com/builders/mastering-the-wp-engine-api-a-comprehensive-guide-for-developers/) article. It demonstrates how to use the WP Engine API in practice.
 
 ## Overview
 
@@ -8,7 +10,9 @@ This tool provides a user-friendly CLI interface to interact with the WP Engine 
 
 - Browse accounts you have access to
 - View sites within each account
-- See detailed information about installs (environments) for each site
+- View installs (environments) within each site
+- Create and delete sites
+- Create and delete installs (environments)
 
 ## Installation
 
@@ -48,11 +52,3 @@ node index.js
 - Press Enter to select an item
 - Select the "Back" option or press Escape to go back to the previous screen
 - Press Ctrl+C to exit the application
-
-## Features
-
-- Interactive navigation through WP Engine resources
-- Account selection
-- Site selection (filtered by selected account)
-- Detailed install information display
-- User-friendly interface with color-coded output
