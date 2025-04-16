@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * WP Engine API CLI Tool
- * An interactive command-line interface for interacting with the WP Engine API.
+ * WP Engine Site Management CLI Tool
+ * An interactive command-line interface for managing your WordPress sites and installs via the WP Engine API.
  */
 
 import readline from "readline";

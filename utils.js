@@ -1,7 +1,7 @@
 /**
  * Utility functions for working with the WP Engine API
  */
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -11,17 +11,21 @@ dotenv.config();
  * @returns The Base64 encoded authentication string
  */
 export function createAuthHeader() {
-  const API_USER_ID = process.env.WP_ENGINE_API_USER_ID || '';
-  const API_PASSWORD = process.env.WP_ENGINE_API_PASSWORD || '';
-  
+  const API_USER_ID = process.env.WP_ENGINE_API_USER_ID || "";
+  const API_PASSWORD = process.env.WP_ENGINE_API_PASSWORD || "";
+
   if (!API_USER_ID || !API_PASSWORD) {
-    console.error('Error: WP Engine API credentials not found in environment variables.');
-    console.error('Please create a .env file with WP_ENGINE_API_USER_ID and WP_ENGINE_API_PASSWORD.');
+    console.error(
+      "Error: WP Engine API credentials not found in environment variables."
+    );
+    console.error(
+      "Please create a .env file with WP_ENGINE_API_USER_ID and WP_ENGINE_API_PASSWORD."
+    );
     process.exit(1);
   }
-  
+
   // Create the authorization header
-  const auth = Buffer.from(`${API_USER_ID}:${API_PASSWORD}`).toString('base64');
+  const auth = Buffer.from(`${API_USER_ID}:${API_PASSWORD}`).toString("base64");
   return `Basic ${auth}`;
 }
 
@@ -31,18 +35,18 @@ export function createAuthHeader() {
  */
 export async function fetchAccounts() {
   try {
-    const response = await fetch('https://api.wpengineapi.com/v1/accounts', {
-      headers: { 'Authorization': createAuthHeader() }
+    const response = await fetch("https://api.wpengineapi.com/v1/accounts", {
+      headers: { Authorization: createAuthHeader() },
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.results || [];
   } catch (error) {
-    console.error('Error fetching accounts:', error);
+    console.error("Error fetching accounts:", error);
     throw error;
   }
 }
@@ -53,18 +57,18 @@ export async function fetchAccounts() {
  */
 export async function fetchSites() {
   try {
-    const response = await fetch('https://api.wpengineapi.com/v1/sites', {
-      headers: { 'Authorization': createAuthHeader() }
+    const response = await fetch("https://api.wpengineapi.com/v1/sites", {
+      headers: { Authorization: createAuthHeader() },
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.results || [];
   } catch (error) {
-    console.error('Error fetching sites:', error);
+    console.error("Error fetching sites:", error);
     throw error;
   }
 }
@@ -78,14 +82,16 @@ export async function fetchSitesByAccount(accountId) {
   try {
     // First, fetch all sites
     const allSites = await fetchSites();
-    
+
     // Then filter sites by account ID
-    return allSites.filter(site => {
+    return allSites.filter((site) => {
       // Check if the site belongs to the specified account
       // Some sites may have an account property or we may need to check other properties
-      return site.account === accountId || 
-             (site.account && site.account.id === accountId) ||
-             (site.accountId === accountId);
+      return (
+        site.account === accountId ||
+        (site.account && site.account.id === accountId) ||
+        site.accountId === accountId
+      );
     });
   } catch (error) {
     console.error(`Error fetching sites for account ${accountId}:`, error);
@@ -99,18 +105,18 @@ export async function fetchSitesByAccount(accountId) {
  */
 export async function fetchInstalls() {
   try {
-    const response = await fetch('https://api.wpengineapi.com/v1/installs', {
-      headers: { 'Authorization': createAuthHeader() }
+    const response = await fetch("https://api.wpengineapi.com/v1/installs", {
+      headers: { Authorization: createAuthHeader() },
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.results || [];
   } catch (error) {
-    console.error('Error fetching installs:', error);
+    console.error("Error fetching installs:", error);
     throw error;
   }
 }
@@ -124,13 +130,15 @@ export async function fetchInstallsBySite(siteId) {
   try {
     // First, fetch all installs
     const allInstalls = await fetchInstalls();
-    
+
     // Then filter installs by site ID
-    return allInstalls.filter(install => {
+    return allInstalls.filter((install) => {
       // Check if the install belongs to the specified site
-      return install.site === siteId || 
-             (install.site && install.site.id === siteId) ||
-             (install.siteId === siteId);
+      return (
+        install.site === siteId ||
+        (install.site && install.site.id === siteId) ||
+        install.siteId === siteId
+      );
     });
   } catch (error) {
     console.error(`Error fetching installs for site ${siteId}:`, error);
@@ -146,27 +154,36 @@ export async function fetchInstallsBySite(siteId) {
 export async function deleteInstall(installId) {
   try {
     const credentials = createAuthHeader();
-    
+
     if (!credentials) {
-      throw new Error('API credentials not found. Please check your .env file.');
+      throw new Error(
+        "API credentials not found. Please check your .env file."
+      );
     }
-    
-    const response = await fetch(`https://api.wpengineapi.com/v1/installs/${installId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': credentials,
-        'Content-Type': 'application/json'
+
+    const response = await fetch(
+      `https://api.wpengineapi.com/v1/installs/${installId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: credentials,
+          "Content-Type": "application/json",
+        },
       }
-    });
-    
+    );
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Failed to delete install: ${response.status} ${response.statusText}\n${JSON.stringify(errorData, null, 2)}`);
+      throw new Error(
+        `Failed to delete install: ${response.status} ${
+          response.statusText
+        }\n${JSON.stringify(errorData, null, 2)}`
+      );
     }
-    
+
     return { success: true };
   } catch (error) {
-    console.error('Error deleting install:', error);
+    console.error("Error deleting install:", error);
     throw error;
   }
 }
@@ -181,43 +198,49 @@ export async function deleteInstall(installId) {
 export async function createInstall(siteId, accountId, installData) {
   try {
     const credentials = createAuthHeader();
-    
+
     if (!credentials) {
-      throw new Error('API credentials not found. Please check your .env file.');
+      throw new Error(
+        "API credentials not found. Please check your .env file."
+      );
     }
-    
+
     // Debug log to see what values we're sending
-    console.log('Debug - Creating install with:');
+    console.log("Debug - Creating install with:");
     console.log(`Site ID: ${siteId}`);
     console.log(`Account ID: ${accountId}`);
     console.log(`Install Data: ${JSON.stringify(installData)}`);
-    
+
     // The API expects site_id and account_id
     const requestBody = {
       site_id: siteId,
       account_id: accountId,
-      ...installData
+      ...installData,
     };
-    
+
     console.log(`Request Body: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetch(`https://api.wpengineapi.com/v1/installs`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': credentials,
-        'Content-Type': 'application/json'
+        Authorization: credentials,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Failed to create install: ${response.status} ${response.statusText}\n${JSON.stringify(errorData, null, 2)}`);
+      throw new Error(
+        `Failed to create install: ${response.status} ${
+          response.statusText
+        }\n${JSON.stringify(errorData, null, 2)}`
+      );
     }
-    
+
     return await response.json();
   } catch (error) {
-    console.error('Error creating install:', error);
+    console.error("Error creating install:", error);
     throw error;
   }
 }
@@ -231,41 +254,47 @@ export async function createInstall(siteId, accountId, installData) {
 export async function createSite(accountId, siteData) {
   try {
     const credentials = createAuthHeader();
-    
+
     if (!credentials) {
-      throw new Error('API credentials not found. Please check your .env file.');
+      throw new Error(
+        "API credentials not found. Please check your .env file."
+      );
     }
-    
+
     // Debug log to see what values we're sending
-    console.log('Debug - Creating site with:');
+    console.log("Debug - Creating site with:");
     console.log(`Account ID: ${accountId}`);
     console.log(`Site Data: ${JSON.stringify(siteData)}`);
-    
+
     // The API expects account_id
     const requestBody = {
       account_id: accountId,
-      ...siteData
+      ...siteData,
     };
-    
+
     console.log(`Request Body: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetch(`https://api.wpengineapi.com/v1/sites`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': credentials,
-        'Content-Type': 'application/json'
+        Authorization: credentials,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Failed to create site: ${response.status} ${response.statusText}\n${JSON.stringify(errorData, null, 2)}`);
+      throw new Error(
+        `Failed to create site: ${response.status} ${
+          response.statusText
+        }\n${JSON.stringify(errorData, null, 2)}`
+      );
     }
-    
+
     return await response.json();
   } catch (error) {
-    console.error('Error creating site:', error);
+    console.error("Error creating site:", error);
     throw error;
   }
 }
