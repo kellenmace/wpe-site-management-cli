@@ -326,6 +326,13 @@ async function main() {
           displayLoading(`Loading installs for site: ${selectedSite.name}...`);
           const installs = await fetchInstallsBySite(selectedSite.id);
           
+          // Check which environments already exist
+          const existingEnvironments = installs.map(install => install.environment);
+          const hasProduction = existingEnvironments.includes('production');
+          const hasStaging = existingEnvironments.includes('staging');
+          const hasDevelopment = existingEnvironments.includes('development');
+          const allEnvironmentsExist = hasProduction && hasStaging && hasDevelopment;
+          
           if (!installs.length) {
             clearScreen();
             displayWelcome();
@@ -361,20 +368,20 @@ async function main() {
                 displayWelcome();
                 console.log(chalk.cyan('Select environment:'));
                 
-                const environmentOptions = [
-                  'production',
-                  'staging',
-                  'development'
-                ];
+                // Only show environment options that don't already exist
+                const availableEnvironments = [];
+                if (!hasProduction) availableEnvironments.push('production');
+                if (!hasStaging) availableEnvironments.push('staging');
+                if (!hasDevelopment) availableEnvironments.push('development');
                 
-                const environmentIndex = await createMenu('Select environment:', environmentOptions);
+                const environmentIndex = await createMenu('Select environment:', availableEnvironments);
                 
                 // If user pressed Escape, cancel the operation
                 if (environmentIndex === -1) {
                   continue;
                 }
                 
-                const environment = environmentOptions[environmentIndex];
+                const environment = availableEnvironments[environmentIndex];
                 
                 // Display loading message
                 clearScreen();
@@ -415,7 +422,12 @@ async function main() {
           const installOptions = installs.map(install => 
             `${install.name} (${install.environment}) - ${install.primary_domain || 'No domain'}`
           );
-          installOptions.push('+ Add install');
+          
+          // Only show '+ Add install' option if at least one environment type doesn't exist
+          if (!allEnvironmentsExist) {
+            installOptions.push('+ Add install');
+          }
+          
           installOptions.push('← Back to site selection');
           installOptions.push('Exit');
           
@@ -429,7 +441,7 @@ async function main() {
             // User selected 'Exit'
             exitApp = true;
             continue;
-          } else if (installIndex === installOptions.length - 3) {
+          } else if (!allEnvironmentsExist && installIndex === installOptions.length - 3) {
             // User selected '+ Add install'
             try {
               // Prompt for install details
@@ -440,20 +452,20 @@ async function main() {
               displayWelcome();
               console.log(chalk.cyan('Select environment:'));
               
-              const environmentOptions = [
-                'production',
-                'staging',
-                'development'
-              ];
+              // Only show environment options that don't already exist
+              const availableEnvironments = [];
+              if (!hasProduction) availableEnvironments.push('production');
+              if (!hasStaging) availableEnvironments.push('staging');
+              if (!hasDevelopment) availableEnvironments.push('development');
               
-              const environmentIndex = await createMenu('Select environment:', environmentOptions);
+              const environmentIndex = await createMenu('Select environment:', availableEnvironments);
               
               // If user pressed Escape, cancel the operation
               if (environmentIndex === -1) {
                 continue;
               }
               
-              const environment = environmentOptions[environmentIndex];
+              const environment = availableEnvironments[environmentIndex];
               
               // Display loading message
               clearScreen();
