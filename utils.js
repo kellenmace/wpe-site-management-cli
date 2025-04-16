@@ -205,12 +205,6 @@ export async function createInstall(siteId, accountId, installData) {
       );
     }
 
-    // Debug log to see what values we're sending
-    console.log("Debug - Creating install with:");
-    console.log(`Site ID: ${siteId}`);
-    console.log(`Account ID: ${accountId}`);
-    console.log(`Install Data: ${JSON.stringify(installData)}`);
-
     // The API expects site_id and account_id
     const requestBody = {
       site_id: siteId,
@@ -260,11 +254,6 @@ export async function createSite(accountId, siteData) {
         "API credentials not found. Please check your .env file."
       );
     }
-
-    // Debug log to see what values we're sending
-    console.log("Debug - Creating site with:");
-    console.log(`Account ID: ${accountId}`);
-    console.log(`Site Data: ${JSON.stringify(siteData)}`);
 
     // The API expects account_id
     const requestBody = {
