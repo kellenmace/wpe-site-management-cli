@@ -1,7 +1,7 @@
 {
-  "name": "wpe-cli",
+  "name": "wpe-site-management-cli",
   "version": "1.0.0",
-  "description": "Interactive CLI tool for working with the WP Engine API",
+  "description": "Site Management CLI Tool for the WP Engine API",
   "main": "index.js",
   "type": "module",
   "scripts": {
