@@ -4,6 +4,9 @@ An interactive command-line interface for working with the [WP Engine API](https
 
 This is a demo app to accompany the [Mastering the WP Engine API: A Comprehensive Guide for Developers](https://wpengine.com/builders/mastering-the-wp-engine-api-a-comprehensive-guide-for-developers/) article. It demonstrates how to use the WP Engine API in practice.
 
+![wpe-cli-demo](https://github.com/user-attachments/assets/ea27eb3c-e821-419d-a5f8-ee2d4573eb4b)
+
+
 ## Overview
 
 This tool provides a user-friendly CLI interface to interact with the WP Engine API. It allows you to:
